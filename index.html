@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{SOC_NAME}} · Operations Wall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div id="boot-overlay">
+    <div class="boot-text">INITIALIZING SECURITY OPERATIONS CENTER</div>
+    <div class="boot-bar"><div class="boot-fill"></div></div>
+  </div>
+
+  <div class="wall">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-mark">◆</span>
+        <div class="brand-text">
+          <div class="brand-name">{{SOC_NAME}}</div>
+          <div class="brand-tag">SECURITY OPERATIONS CENTER · LIVE</div>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div class="threat-block">
+          <span class="threat-label">THREAT LEVEL</span>
+          <div class="threat-pill" id="threat-pill" data-level="0">
+            <span id="threat-text">CALCULATING</span>
+          </div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi-cell"><span class="kpi-label">ALERTS 24H</span><span class="kpi-value" id="hdr-alerts24">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">CRITICAL</span><span class="kpi-value crit" id="hdr-critical">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">PROBES</span><span class="kpi-value" id="hdr-probes">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">CVE OPEN</span><span class="kpi-value" id="hdr-cves">--</span></div>
+          <div class="kpi-cell"><span class="kpi-label">EVENTS/MIN</span><span class="kpi-value" id="hdr-eps">--</span></div>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="btn-help" onclick="window.open('/api/docs/user-manual', '_blank')" title="User Manual">📖 Help</button>
+        <div class="clock">
+          <div class="clock-time" id="clock-time">--:--:--</div>
+          <div class="clock-date" id="clock-date">----/--/-- UTC</div>
+        </div>
+        <div class="services" id="services">
+          <a class="svc" data-key="socops"    href="{{SOCOPS_URL}}"    target="_blank" rel="noopener"><span class="dot"></span>SOCops</a>
+          <a class="svc" data-key="sbomguard" href="{{SBOMGUARD_URL}}" target="_blank" rel="noopener"><span class="dot"></span>SBOM</a>
+          <a class="svc" data-key="socint"    href="{{SOCINT_URL}}"    target="_blank" rel="noopener"><span class="dot"></span>SOCint</a>
+          <a class="svc" data-key="honeypot"  href="{{HONEYPOT_URL}}"  target="_blank" rel="noopener"><span class="dot"></span>Honey</a>
+          <a class="svc" data-key="wazuh"     href="{{WAZUH_URL}}"     target="_blank" rel="noopener"><span class="dot"></span>Wazuh</a>
+          <a class="svc" data-key="roadmap"      href="{{ROADMAP_URL}}"      target="_blank" rel="noopener"><span class="dot"></span>Roadmap</a>
+          <a class="svc" data-key="ransomware"   href="{{RANSOMWARE_URL}}"   target="_blank" rel="noopener"><span class="dot"></span>Ransomware</a>
+          <a class="svc" data-key="shinyhunters" href="{{SHINYHUNTERS_URL}}" target="_blank" rel="noopener"><span class="dot"></span>ShinyHunters</a>
+          <a class="svc" data-key="qilin"        href="{{QILIN_URL}}"        target="_blank" rel="noopener"><span class="dot"></span>Qilin</a>
+          <a class="svc" data-key="ir"           href="{{IR_URL}}"           target="_blank" rel="noopener"><span class="dot"></span>IR Cases</a>
+          <a class="svc" data-key="phishing"     href="{{PHISHING_URL}}"     target="_blank" rel="noopener"><span class="dot"></span>Phishing</a>
+          <a class="svc" data-key="attack"       href="{{ATTACK_URL}}"       target="_blank" rel="noopener"><span class="dot"></span>AttackSurf</a>
+          <a class="svc" data-key="canary"       href="{{CANARY_URL}}"       target="_blank" rel="noopener"><span class="dot"></span>Canary</a>
+          <a class="svc" data-key="cred"         href="{{CRED_URL}}"         target="_blank" rel="noopener"><span class="dot"></span>CredExp</a>
+          <a class="svc" data-key="passivedns"   href="{{PASSIVEDNS_URL}}"   target="_blank" rel="noopener"><span class="dot"></span>PassiveDNS</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="panel" id="panel-timeline">
+        <header><h2><span class="bullet"></span>Alert Timeline · 24h</h2><span class="panel-meta" id="meta-timeline">SOCops</span></header>
+        <div class="panel-body chart-wrap"><canvas id="chart-timeline"></canvas></div>
+      </section>
+
+      <section class="panel panel-tall" id="panel-map">
+        <header><h2><span class="bullet"></span>Attacker Origin Map</h2><span class="panel-meta" id="meta-map">honeypot · live</span></header>
+        <div class="panel-body"><div id="map"></div></div>
+      </section>
+
+      <section class="panel" id="panel-severity">
+        <header><h2><span class="bullet"></span>Severity Distribution</h2><span class="panel-meta">SOCops</span></header>
+        <div class="panel-body chart-wrap"><canvas id="chart-severity"></canvas></div>
+      </section>
+
+      <section class="panel" id="panel-rules">
+        <header><h2><span class="bullet"></span>Top Rules · Triggered</h2><span class="panel-meta">SOCops</span></header>
+        <div class="panel-body"><ul class="ranked-list" id="rules-list"><li class="empty">awaiting data…</li></ul></div>
+      </section>
+
+      <section class="panel" id="panel-eps">
+        <header><h2><span class="bullet"></span>Events / Minute</h2><span class="panel-meta" id="meta-eps">live</span></header>
+        <div class="panel-body chart-wrap"><canvas id="chart-eps"></canvas></div>
+      </section>
+
+      <section class="panel" id="panel-cves">
+        <header><h2><span class="bullet"></span>Vulnerability Posture</h2><span class="panel-meta">SBOMguard</span></header>
+        <div class="panel-body">
+          <div class="big-stats" id="cve-stats">
+            <div class="stat"><span class="stat-num" data-key="critical">--</span><span class="stat-cap">CRIT</span></div>
+            <div class="stat"><span class="stat-num" data-key="high">--</span><span class="stat-cap">HIGH</span></div>
+            <div class="stat"><span class="stat-num" data-key="medium">--</span><span class="stat-cap">MED</span></div>
+            <div class="stat"><span class="stat-num" data-key="kev">--</span><span class="stat-cap">KEV</span></div>
+          </div>
+          <div class="sub-row">
+            <span><b id="cve-hosts">--</b> hosts</span>
+            <span><b id="cve-sboms">--</b> SBOMs</span>
+            <span><b id="cve-feed">--</b> feed</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-mitre">
+        <header><h2><span class="bullet"></span>MITRE ATT&amp;CK</h2><span class="panel-meta">tactics</span></header>
+        <div class="panel-body"><div class="mitre-grid" id="mitre-grid"></div></div>
+      </section>
+
+      <section class="panel panel-wide" id="panel-stream">
+        <header><h2><span class="bullet"></span>Live Alert Stream</h2><span class="panel-meta" id="meta-stream">SOCops · 15</span></header>
+        <div class="panel-body table-wrap">
+          <table class="stream-table">
+            <thead><tr><th>Time</th><th>Sev</th><th>Rule</th><th>Agent</th><th>Source</th></tr></thead>
+            <tbody id="alert-stream"><tr class="empty"><td colspan="5">awaiting alerts…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-honeypot">
+        <header><h2><span class="bullet"></span>Honeypot Activity</h2><span class="panel-meta">NetScaler</span></header>
+        <div class="panel-body chart-wrap"><canvas id="chart-honeypot"></canvas></div>
+      </section>
+    </main>
+
+    <footer class="logbar">
+      <div class="status">
+        <span class="dot pulse"></span>
+        <span id="status-text">CONNECTING</span>
+        <span class="sep">·</span>
+        <span id="last-update">last refresh: --</span>
+        <span class="sep">·</span>
+        <span id="refresh-counter">next: --s</span>
+      </div>
+      <div class="ticker-wrap"><div class="ticker" id="log-ticker">▸ awaiting honeypot events…</div></div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

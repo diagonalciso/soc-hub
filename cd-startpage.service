@@ -1,0 +1,14 @@
+[Unit]
+Description=CD-Startpage — Service Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=openclaw
+WorkingDirectory=$HOME/claude/CD-Startpage
+ExecStart=/usr/bin/python3 $HOME/claude/CD-Startpage/server.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

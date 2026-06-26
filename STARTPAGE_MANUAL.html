@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CD-Startpage Manual</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; }
+        h1 { color: #4285f4; border-bottom: 3px solid #4285f4; padding-bottom: 15px; margin-bottom: 30px; font-size: 2.5em; }
+        h2 { color: #5a9fd4; margin-top: 40px; margin-bottom: 20px; padding-left: 10px; border-left: 4px solid #5a9fd4; }
+        p { margin-bottom: 15px; }
+        ul { margin-left: 30px; margin-bottom: 15px; }
+        code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; }
+        pre { background: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>🏠 CD-Startpage Manual</h1>
+<p style="font-size: 1.1em; color: #666; margin-bottom: 30px;">Unified service portal dashboard</p>
+
+<h2>Overview</h2>
+<p>Central landing page with links to all SOC services. Displays service status, quick access, documentation.</p>
+
+<h2>Features</h2>
+<ul>
+    <li><strong>Service Links</strong> — Quick launch to SOCint, SOCops, SBOMguard, honeypot, Wazuh dashboard</li>
+    <li><strong>Status Indicators</strong> — Green/red status for each service</li>
+    <li><strong>Documentation</strong> — Links to user manuals</li>
+    <li><strong>Health Check</strong> — Real-time service availability</li>
+</ul>
+
+<h2>Service Tiles</h2>
+<ul>
+    <li><strong>SOCint (Threat Intelligence)</strong> — Port 3000 (frontend) / 8000 (API)</li>
+    <li><strong>SOCops (Wazuh Workbench)</strong> — Port 8081</li>
+    <li><strong>SBOMguard (SBOM Tracker)</strong> — Port 8082</li>
+    <li><strong>NetScaler Honeypot</strong> — Port 8083</li>
+    <li><strong>Wazuh Dashboard</strong> — Port 8080</li>
+</ul>
+
+<h2>Accessing</h2>
+<pre><code>http://localhost      # Standalone Startpage port 8080
+http://localhost      # Bundle deployment port 80</code></pre>
+
+<h2>Configuration</h2>
+<p>Edit <code>.env</code> to customize:</p>
+<ul>
+    <li>Service URLs (if not on localhost)</li>
+    <li>Title, logo, theme</li>
+    <li>Health check endpoints</li>
+</ul>
+
+<h2>Health Checks</h2>
+<p>Startpage polls service health endpoints and displays status:</p>
+<ul>
+    <li><code>http://localhost:8000/api/health</code> — SOCint API</li>
+    <li><code>http://localhost:8081/api/stats</code> — SOCops</li>
+    <li><code>http://localhost:8082/api/health</code> — SBOMguard</li>
+    <li><code>http://localhost:8083/health</code> — Honeypot</li>
+</ul>
+
+<h2>Customization</h2>
+<p>Modify <code>app.py</code> to:</p>
+<ul>
+    <li>Change colors, fonts, layout</li>
+    <li>Add/remove service tiles</li>
+    <li>Customize health check logic</li>
+</ul>
+
+<h2>Deployment</h2>
+<pre><code># Standalone
+python3 app.py    # Runs on port 8080
+
+# Docker Compose (bundled)
+docker compose up startpage  # Runs on port 80</code></pre>
+
+</div>
+</body>
+</html>
