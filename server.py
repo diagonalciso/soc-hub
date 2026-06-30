@@ -52,6 +52,7 @@ def load_env():
         'QILIN_URL': 'http://10.10.0.40:8098',
         'IR_URL': 'http://10.10.0.40:8206',
         'SOCMAP_URL': 'http://10.10.0.40:8100',
+        'WAZUHMAP_URL': 'http://10.10.0.174:8100/attackmap',
         'SOC_NAME': 'CLAW SOC',
         'METRICS_CACHE_TTL': '5',
         'METRICS_FETCH_TIMEOUT': '2.5',
@@ -120,6 +121,7 @@ def collect_metrics():
         'cred':         CONFIG['CRED_URL'].rstrip('/'),
         'passivedns':   CONFIG['PASSIVEDNS_URL'].rstrip('/'),
         'socmap':       CONFIG['SOCMAP_URL'].rstrip('/'),
+        'wazuhmap':     CONFIG['WAZUHMAP_URL'].rstrip('/'),
     }
 
     self_port = int(CONFIG['STARTPAGE_PORT'])
@@ -318,6 +320,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '{{QILIN_URL}}':         CONFIG['QILIN_URL'],
             '{{IR_URL}}':            CONFIG['IR_URL'],
             '{{SOCMAP_URL}}':     CONFIG['SOCMAP_URL'],
+            '{{WAZUHMAP_URL}}':   CONFIG['WAZUHMAP_URL'],
         }
         for k, v in replacements.items():
             html = html.replace(k, v)
