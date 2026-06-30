@@ -51,7 +51,7 @@ def load_env():
         'SHINYHUNTERS_URL': 'http://10.10.0.40:8097',
         'QILIN_URL': 'http://10.10.0.40:8098',
         'IR_URL': 'http://10.10.0.40:8206',
-        'ATTACKMAP_URL': 'http://10.10.0.40:8100',
+        'SOCMAP_URL': 'http://10.10.0.40:8100',
         'SOC_NAME': 'CLAW SOC',
         'METRICS_CACHE_TTL': '5',
         'METRICS_FETCH_TIMEOUT': '2.5',
@@ -119,7 +119,7 @@ def collect_metrics():
         'canary':       CONFIG['CANARY_URL'].rstrip('/'),
         'cred':         CONFIG['CRED_URL'].rstrip('/'),
         'passivedns':   CONFIG['PASSIVEDNS_URL'].rstrip('/'),
-        'attackmap':    CONFIG['ATTACKMAP_URL'].rstrip('/'),
+        'socmap':       CONFIG['SOCMAP_URL'].rstrip('/'),
     }
 
     self_port = int(CONFIG['STARTPAGE_PORT'])
@@ -317,7 +317,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '{{SHINYHUNTERS_URL}}':  CONFIG['SHINYHUNTERS_URL'],
             '{{QILIN_URL}}':         CONFIG['QILIN_URL'],
             '{{IR_URL}}':            CONFIG['IR_URL'],
-            '{{ATTACKMAP_URL}}':     CONFIG['ATTACKMAP_URL'],
+            '{{SOCMAP_URL}}':     CONFIG['SOCMAP_URL'],
         }
         for k, v in replacements.items():
             html = html.replace(k, v)
