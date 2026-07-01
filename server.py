@@ -52,7 +52,7 @@ def load_env():
         'QILIN_URL': 'http://10.10.0.40:8098',
         'IR_URL': 'http://10.10.0.40:8206',
         'SOCMAP_URL': 'http://10.10.0.40:8100',
-        'WAZUHMAP_URL': 'http://10.10.0.174:8100/attackmap',
+        'WAZUHMAP_URL': 'https://10.10.0.174:8100/attackmap',
         'SOC_NAME': 'CLAW SOC',
         'METRICS_CACHE_TTL': '5',
         'METRICS_FETCH_TIMEOUT': '2.5',
