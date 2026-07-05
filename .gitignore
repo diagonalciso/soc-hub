@@ -30,3 +30,4 @@ build/
 *.gguf
 *.onnx
 .DS_Store
+startpage_run.log

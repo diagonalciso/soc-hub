@@ -53,6 +53,7 @@ def load_env():
         'IR_URL': 'http://10.10.0.40:8206',
         'SOCMAP_URL': 'http://10.10.0.40:8100',
         'WAZUHMAP_URL': 'https://10.10.0.174:8100/attackmap',
+        'IRIS_URL': 'https://10.10.0.40:8443',
         'SOC_NAME': 'CLAW SOC',
         'METRICS_CACHE_TTL': '5',
         'METRICS_FETCH_TIMEOUT': '2.5',
@@ -122,6 +123,7 @@ def collect_metrics():
         'passivedns':   CONFIG['PASSIVEDNS_URL'].rstrip('/'),
         'socmap':       CONFIG['SOCMAP_URL'].rstrip('/'),
         'wazuhmap':     CONFIG['WAZUHMAP_URL'].rstrip('/'),
+        'iris':         CONFIG['IRIS_URL'].rstrip('/'),
     }
 
     self_port = int(CONFIG['STARTPAGE_PORT'])
@@ -321,6 +323,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '{{IR_URL}}':            CONFIG['IR_URL'],
             '{{SOCMAP_URL}}':     CONFIG['SOCMAP_URL'],
             '{{WAZUHMAP_URL}}':   CONFIG['WAZUHMAP_URL'],
+            '{{IRIS_URL}}':       CONFIG['IRIS_URL'],
         }
         for k, v in replacements.items():
             html = html.replace(k, v)
