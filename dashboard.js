@@ -200,12 +200,19 @@ function buildDoughnut(canvasId, labels, data, colors) {
 
 /* ── Renderers ────────────────────────────────────────────────────────── */
 function renderHealth(health, urls) {
+  let up = 0, total = 0;
   $$('.svc').forEach(svc => {
     const k = svc.dataset.key;
-    const up = !!health?.[k];
-    svc.dataset.status = up ? 'up' : 'down';
+    const isUp = !!health?.[k];
+    svc.dataset.status = isUp ? 'up' : 'down';
     if (urls && urls[k]) svc.href = urls[k];
+    total++; if (isUp) up++;
   });
+  const txt = `${up}/${total}`;
+  const c1 = $('#svc-count-txt'); if (c1) c1.textContent = txt;
+  const c2 = $('#svc-count-txt2'); if (c2) c2.textContent = txt;
+  const badge = $('#svc-count');
+  if (badge) badge.dataset.health = up === total ? 'ok' : (up === 0 ? 'down' : 'degraded');
 }
 
 function renderHeaderKPIs(m) {
@@ -566,8 +573,24 @@ function dismissBoot() {
   }, 1500);
 }
 
+function initLauncher() {
+  const btn = $('#svc-toggle'), drawer = $('#svc-drawer');
+  if (!btn || !drawer) return;
+  const open = () => { drawer.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+  const close = () => { drawer.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  const toggle = () => (drawer.hidden ? open() : close());
+  btn.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+  // close on outside click, Esc, or picking a service
+  document.addEventListener('click', (e) => {
+    if (!drawer.hidden && !drawer.contains(e.target) && e.target !== btn) close();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  drawer.addEventListener('click', (e) => { if (e.target.closest('.svc')) close(); });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
+  initLauncher();
   startLoop();
   dismissBoot();
 });
