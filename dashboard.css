@@ -109,6 +109,8 @@ body::after {
 
 /* ── Topbar ─────────────────────────────────────────────────────────────── */
 .topbar {
+  position: relative;
+  z-index: 1200;
   display: grid;
   grid-template-columns: minmax(260px, auto) 1fr minmax(260px, auto);
   gap: 14px;
@@ -237,7 +239,7 @@ body::after {
 .svc-count[data-health="down"] .dot { background: var(--crit); box-shadow: 0 0 6px var(--crit); animation: dotPulse 1.4s ease-in-out infinite; }
 
 .svc-drawer {
-  position: absolute; top: calc(100% + 10px); right: 0; z-index: 60;
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 2000;
   width: min(560px, 88vw);
   padding: 16px;
   background: var(--panel, #0d1117);
