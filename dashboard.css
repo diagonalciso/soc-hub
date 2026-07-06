@@ -319,7 +319,6 @@ body::after {
   grid-template-rows: repeat(12, 1fr);
   gap: 10px;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* Panel placement (12x12 grid) */
@@ -404,7 +403,7 @@ body::after {
 
 /* ── Map ────────────────────────────────────────────────────────────────── */
 #map {
-  flex: 1; width: 100%; min-height: 0;
+  flex: 1; width: 100%; min-height: 200px;
   background: #02060d;
   filter: hue-rotate(160deg) saturate(0.6) brightness(0.7);
 }
