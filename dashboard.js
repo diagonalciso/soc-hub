@@ -246,7 +246,7 @@ function renderHeaderKPIs(m) {
 function renderTimeline(m) {
   // Prefer SOCops timeline; if empty, derive from honeypot 60-min activity (still SOC-meaningful)
   const tl = m.socops?.timeline;
-  let labels = [], data = [], source = 'SOCops';
+  let labels = [], data = [], source = 'soc-ops';
   if (Array.isArray(tl) && tl.length) {
     tl.forEach(p => {
       labels.push(p.label || p.t || p.hour || '');
