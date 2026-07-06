@@ -52,6 +52,7 @@ def load_env():
         'QILIN_URL': 'http://10.10.0.40:8098',
         'IR_URL': 'http://10.10.0.40:8206',
         'SOCMAP_URL': 'http://10.10.0.40:8100',
+        'NIDS_URL': 'http://10.10.0.40:8102',
         'WAZUHMAP_URL': 'https://10.10.0.174:8100/attackmap',
         'IRIS_URL': 'https://10.10.0.40:8443',
         'SOC_NAME': 'CLAW SOC',
@@ -122,6 +123,7 @@ def collect_metrics():
         'cred':         CONFIG['CRED_URL'].rstrip('/'),
         'passivedns':   CONFIG['PASSIVEDNS_URL'].rstrip('/'),
         'socmap':       CONFIG['SOCMAP_URL'].rstrip('/'),
+        'nids':         CONFIG['NIDS_URL'].rstrip('/'),
         'wazuhmap':     CONFIG['WAZUHMAP_URL'].rstrip('/'),
         'iris':         CONFIG['IRIS_URL'].rstrip('/'),
     }
@@ -322,6 +324,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '{{QILIN_URL}}':         CONFIG['QILIN_URL'],
             '{{IR_URL}}':            CONFIG['IR_URL'],
             '{{SOCMAP_URL}}':     CONFIG['SOCMAP_URL'],
+            '{{NIDS_URL}}':       CONFIG['NIDS_URL'],
             '{{WAZUHMAP_URL}}':   CONFIG['WAZUHMAP_URL'],
             '{{IRIS_URL}}':       CONFIG['IRIS_URL'],
         }
