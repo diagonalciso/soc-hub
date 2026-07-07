@@ -125,7 +125,7 @@ sudo ufw allow from 10.0.0.0/24 to any port 80
 sudo ufw deny 80
 ```
 
-Or use reverse proxy with auth (see socint ADMIN.md for nginx example).
+Or use reverse proxy with auth (see soc-intel ADMIN.md for nginx example).
 
 ---
 

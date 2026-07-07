@@ -75,7 +75,7 @@ index.html           Static template; server substitutes {{SOC_NAME}}, {{*_URL}}
 dashboard.css        SOC video-wall styling (panel grid, neon, scanlines)
 dashboard.js         Polls /api/metrics, renders charts/map/lists, runs the clock
 .env / .env.example  Port, host, upstream URLs, display name, cache settings
-cd-startpage.service systemd unit
+soc-hub.service systemd unit
 ```
 
 ---
@@ -162,7 +162,7 @@ displays `--` when nothing is available.
 
 ### Restart after edits
 ```bash
-sudo systemctl restart cd-startpage
+sudo systemctl restart soc-hub
 # or, if not running under systemd:
 pkill -f "python3 server.py" ; nohup python3 server.py >/tmp/cdstart.log 2>&1 &
 ```
@@ -171,13 +171,13 @@ pkill -f "python3 server.py" ; nohup python3 server.py >/tmp/cdstart.log 2>&1 &
 
 ## Systemd Service
 
-File: `cd-startpage.service`
+File: `soc-hub.service`
 
 ```bash
-sudo cp cd-startpage.service /etc/systemd/system/
+sudo cp soc-hub.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now cd-startpage
-sudo journalctl -u cd-startpage -f
+sudo systemctl enable --now soc-hub
+sudo journalctl -u soc-hub -f
 ```
 
 ---
@@ -212,4 +212,4 @@ server {
 
 ## Related Projects
 
-- **socops**, **sbomguard**, **netscaler-honeypot**, **wazuh**, **socint** — every panel reads from one of these.
+- **soc-ops**, **soc-sbom**, **netscaler-honeypot**, **wazuh**, **soc-intel** — every panel reads from one of these.

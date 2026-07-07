@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=openclaw
-WorkingDirectory=$HOME/claude/CD-Startpage
-ExecStart=/usr/bin/python3 $HOME/claude/CD-Startpage/server.py
+WorkingDirectory=$HOME/soc-hub
+ExecStart=/usr/bin/python3 $HOME/soc-hub/server.py
 Restart=always
 RestartSec=10
 

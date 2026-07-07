@@ -3,8 +3,8 @@
 The **Startpage** is your entry point to the SOC platform.
 
 When you open it, you see buttons to go to:
-- Threat Intelligence (socint)
-- Alert Queue (socops)
+- Threat Intelligence (soc-intel)
+- Alert Queue (soc-ops)
 - SBOM Vulnerabilities (SBOMguard)
 - Agent Health (wazuh)
 - And more...

@@ -29,9 +29,9 @@ python3 server.py
 ### Install as systemd service
 
 ```bash
-sudo cp cd-startpage.service /etc/systemd/system/
+sudo cp soc-hub.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now cd-startpage
+sudo systemctl enable --now soc-hub
 ```
 
 ---
