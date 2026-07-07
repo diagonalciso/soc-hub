@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CD-Startpage: live SOC video-wall dashboard.
 
-Aggregates metrics from SOCops, SBOMguard, NetScaler honeypot, Wazuh dashboard,
-and SOCint into a single auto-refreshing operations view.
+Aggregates metrics from SOC Ops, SOC SBOM, NetScaler honeypot, Wazuh dashboard,
+and SOC Intel into a single auto-refreshing operations view.
 """
 import http.server
 import socketserver
