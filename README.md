@@ -1,5 +1,7 @@
 # CD-Startpage
 
+> SOC operations wall / service portal
+
 A lightweight service dashboard providing quick access links to all CTI/SOC services: SOCops, SBOMguard, SOCint, NetScaler Honeypot, and Wazuh dashboard.
 
 ---
