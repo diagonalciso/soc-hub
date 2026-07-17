@@ -83,6 +83,21 @@ Live metrics are aggregated only from **SOC Ops**, **SOC SBOM** and the **Wazuh
 collector** (`:8084`, `WAZUHDATA_URL`); every other entry is a launch tile with a
 health dot.
 
+### Fleet manifest
+
+The fleet is **~20 standalone repos, not a monorepo** — deliberately. `fleet.tsv` is
+the single source of truth (name · port · group · kind · repo · notes); keep it in
+lockstep with `.env` (`*_URL`) and `index.html` (tile `data-key`s).
+
+```bash
+./clone-all.sh          # clone missing + ff-pull existing (git-kind rows only)
+./clone-all.sh --dry    # show what it would do
+```
+
+Repos land as siblings of `soc-hub` (`diagonalciso/<repo>`). External tiles
+(SpiderFoot, CyberChef, EML, IRIS, Wazuh) are appliances/3rd-party instances and are
+skipped.
+
 ---
 
 ## Requirements

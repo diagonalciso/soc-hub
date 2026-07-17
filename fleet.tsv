@@ -1,0 +1,36 @@
+# soc-hub fleet manifest — single source of truth for the service wall.
+# Tab-separated. Columns: name  port  group  kind  source  notes
+#   kind   = git | external
+#   source = for git: GitHub "org/repo" (clone git@github.com:<source>.git)
+#            for external: what the tile points at (appliance / 3rd-party instance)
+# Live metrics are aggregated only from soc-ops, soc-sbom and the wazuh
+# collector (:8084, WAZUHDATA_URL); every other row is a launch tile.
+# Keep this in lockstep with .env (*_URL) and index.html (data-key tiles).
+#
+# name	port	group	kind	source	notes
+soc-ops	8081	Core Platform	git	diagonalciso/soc-ops	alert triage + AI enrichment; metrics source
+soc-sbom	8082	Core Platform	git	diagonalciso/soc-sbom	SBOM vulnerability tracker; metrics source
+soc-intel	8083	Core Platform	git	diagonalciso/soc-intel	STIX 2.1 threat-intel platform
+soc-threatmap	8100	Core Platform	git	diagonalciso/soc-threatmap	live attack map
+soc-roadmap	8090	Core Platform	git	diagonalciso/soc-roadmap	unified roadmap portal
+soc-phish	8091	Monitors	git	diagonalciso/soc-phish	email parser + IOC extraction
+soc-attack-surface	8092	Monitors	git	diagonalciso/soc-attack-surface	exposure monitor
+soc-canary	8093	Monitors	git	diagonalciso/soc-canary	deception token manager
+soc-cred-monitor	8094	Monitors	git	diagonalciso/soc-cred-monitor	breach/credential exposure
+soc-passive-dns	8095	Monitors	git	diagonalciso/soc-passive-dns	DNS/subdomain tracking
+soc-supply	8109	Monitors	git	diagonalciso/soc-supply	supply-chain monitor
+netscaler-patch-monitor	8121	Monitors	git	diagonalciso/netscaler-patch-monitor	PRIVATE, under-dev, local-only, unpublished
+soc-nids	8102	Detection & Network	git	diagonalciso/soc-nids	network IDS view
+soc-detections	8103	Detection & Network	git	diagonalciso/soc-detections	detection rule catalog
+soc-validate	8104	Detection & Network	git	diagonalciso/soc-validate	detection validation
+soc-osint	8105	Detection & Network	git	diagonalciso/soc-osint	OSINT aggregation
+spiderfoot	8106	Analyst Tools	external	SpiderFoot instance	3rd-party, not our repo
+cyberchef	8107	Analyst Tools	external	CyberChef instance	3rd-party, not our repo
+eml-analyzer	8108	Analyst Tools	external	EML analyzer instance	3rd-party, not our repo
+soc-ransomware	8096	Threat Actors	git	diagonalciso/soc-ransomware	ransomware victim/group tracker
+soc-shinyhunters	8097	Threat Actors	git	diagonalciso/soc-shinyhunters	ShinyHunters actor monitor
+soc-qilin	8098	Threat Actors	git	diagonalciso/soc-qilin	Qilin actor monitor
+soc-ir-cases	8206	Cases & External	git	diagonalciso/soc-ir-cases	IR case manager
+iris	8443	Cases & External	external	DFIR-IRIS instance (https)	3rd-party appliance
+wazuh	10.10.0.174	Cases & External	external	Wazuh Dashboards UI (https)	appliance; collector at :8084 = WAZUHDATA_URL (repo: diagonalciso/wazuh)
+wazuh-map	10.10.0.174:8100	Cases & External	external	Wazuh attack map (https)	appliance
