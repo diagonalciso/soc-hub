@@ -4,7 +4,7 @@
 
 soc-hub is a **portal and monitoring dashboard** in one (formerly *CD-Startpage*).
 
-At its simplest: a wall of 26 service tiles (six groups) with live health dots.
+At its simplest: a wall of 27 service tiles (six groups) with live health dots.
 At its most advanced: live dashboard pulling data from SOC Ops / SOC SBOM / Wazuh, showing real-time metrics.
 
 The code supports both modes — use as a simple portal, or enhance it to pull live data.

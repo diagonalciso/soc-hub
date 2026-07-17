@@ -1,6 +1,6 @@
 # soc-hub — Administration Manual
 
-`soc-hub` is the **portal + live video-wall** for the CTI/SOC fleet: 26 service tiles
+`soc-hub` is the **portal + live video-wall** for the CTI/SOC fleet: 27 service tiles
 (six groups) with health dots, plus a background aggregator that renders an operations
 dashboard from SOC Ops, SOC SBOM and the Wazuh collector.
 
@@ -55,9 +55,9 @@ Precedence: **shell env > `.env` > built-in defaults**.
 | `SOC_NAME` | `CLAW SOC` | Topbar / page title |
 | `METRICS_CACHE_TTL` | `5` | Seconds between background metric refreshes |
 | `METRICS_FETCH_TIMEOUT` | `2.5` | Per-upstream HTTP timeout |
-| `*_URL` | see `.env.example` | One per tile — 26 of them |
+| `*_URL` | see `.env.example` | One per tile — 27 of them |
 
-The `*_URL` set covers all 26 tiles. Metrics are only fetched from `SOCOPS_URL`,
+The `*_URL` set covers all 27 tiles. Metrics are only fetched from `SOCOPS_URL`,
 `SBOMGUARD_URL` and `WAZUHDATA_URL` (the `:8084` Wazuh collector, distinct from
 `WAZUH_URL`, which is the Dashboards UI the tile links to). Everything else is a
 launch tile whose dot comes from `/api/health`.

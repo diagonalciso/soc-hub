@@ -4,7 +4,7 @@
 
 `soc-hub` is the single pane of glass for the whole estate. It does two jobs:
 
-1. **Service wall** — quick-access tiles with live health dots for **26 services**,
+1. **Service wall** — quick-access tiles with live health dots for **27 services**,
    grouped into six sections (Core Platform, Monitors, Detection & Network, Analyst
    Tools, Threat Actors, Cases & External).
 2. **Live dashboard** — a background aggregator pulls metrics from SOC Ops, SOC SBOM
@@ -18,13 +18,13 @@ Python **stdlib only**, threaded HTTP server, `.env`-driven. Default port **8080
 > used to hold. There is no separate "bundle" anymore — the fleet is ~50 standalone
 > git repos and `soc-hub` is where they surface together.
 
-> **Under-development tiles**: some tools appear on the wall only when running
-> locally and are **not part of the published fleet** — e.g. **NetScaler Patch**
-> (port 8121, own-gateway CVE patch monitor). Its repo stays local for now.
+> **Private tiles**: **NetScaler Patch** (port 8121, own-gateway patch monitor)
+> lives in a **private** repo (`diagonalciso/netscaler-patch-monitor`) — it's part
+> of the fleet but not public, since it reveals own-gateway patch posture.
 
 ---
 
-## The 26 services on the wall
+## The 27 services on the wall
 
 Hosts below use the sanitized `10.10.0.40` placeholder (public repo); real addresses
 live only in the gitignored `.env`.
@@ -47,7 +47,8 @@ live only in the gitignored `.env`.
 | SOC Cred Monitor | 8094 | `soc-cred-monitor` — breach/credential exposure |
 | SOC Passive DNS | 8095 | `soc-passive-dns` — DNS/subdomain tracking |
 | SOC Supply | 8109 | `soc-supply` — supply-chain monitor |
-| NetScaler Patch | 8121 | `netscaler-patch-monitor` — **under dev, local only, unpublished** |
+| SOC NetScaler | 8120 | `soc-netscaler` — NetScaler CVE/KEV/EPSS threat monitor |
+| NetScaler Patch | 8121 | `netscaler-patch-monitor` — own-gateway patch monitor (**private repo**) |
 
 ### Detection & Network
 | Tile | Port | Repo |
@@ -62,7 +63,7 @@ live only in the gitignored `.env`.
 |---|---|---|
 | SpiderFoot | 8106 | `soc-osint`/SpiderFoot instance |
 | CyberChef | 8107 | CyberChef instance |
-| EML Analyzer | 8108 | EML analyzer instance |
+| EML Analyzer | 8108 | `soc-eml-analyzer` — our EML parser (headers, URLs, attachments) |
 
 ### Threat Actors
 | Tile | Port | Repo |
@@ -77,7 +78,7 @@ live only in the gitignored `.env`.
 | SOC IR Cases | 8206 | `soc-ir-cases` — IR case manager |
 | IRIS | 8443 (https) | DFIR-IRIS instance |
 | Wazuh | `10.10.0.174` (https) | Wazuh Dashboards UI |
-| Wazuh Map | `10.10.0.174:8100/attackmap` (https) | Wazuh attack map |
+| Wazuh Map | `10.10.0.174:8100/attackmap` (https) | `wazuh-attackmap` — our attack map, deployed on the Wazuh host |
 
 Live metrics are aggregated only from **SOC Ops**, **SOC SBOM** and the **Wazuh
 collector** (`:8084`, `WAZUHDATA_URL`); every other entry is a launch tile with a
@@ -95,8 +96,8 @@ lockstep with `.env` (`*_URL`) and `index.html` (tile `data-key`s).
 ```
 
 Repos land as siblings of `soc-hub` (`diagonalciso/<repo>`). External tiles
-(SpiderFoot, CyberChef, EML, IRIS, Wazuh) are appliances/3rd-party instances and are
-skipped.
+(SpiderFoot, CyberChef, IRIS, Wazuh appliance) are appliances/3rd-party instances and
+are skipped.
 
 ---
 
@@ -146,7 +147,7 @@ Precedence: **shell env > `.env` file > built-in defaults**.
 | `SOC_NAME` | `CLAW SOC` | Display name in topbar/title |
 | `METRICS_CACHE_TTL` | `5` | Seconds between background metric refreshes |
 | `METRICS_FETCH_TIMEOUT` | `2.5` | Per-upstream HTTP timeout |
-| `*_URL` (26 tiles) | see `.env.example` | Base URL per service (`SOCOPS_URL`, `SOCINT_URL`, `WAZUHDATA_URL`, …) |
+| `*_URL` (27 tiles) | see `.env.example` | Base URL per service (`SOCOPS_URL`, `SOCINT_URL`, `WAZUHDATA_URL`, …) |
 
 > IPs in `.env.example` and the `server.py` defaults are deliberately sanitized
 > (`10.10.0.x`) because this repo is public. Real addresses live only in the
