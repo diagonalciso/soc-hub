@@ -23,11 +23,18 @@ http://your-server:80
 
 ### Click to Navigate
 
-Each button takes you to a service:
+Each button takes you to a service. Core:
 - **🌐 Threat Intelligence** → Search external threats
 - **🚨 Alert Queue** → Review and triage security alerts
 - **🔍 SBOM Vulnerabilities** → Check app components for CVEs
 - **💻 Agent Health** → See which computers are online
+
+The wall also groups the standalone sidecar tools (Monitors, Detection & Network,
+Analyst Tools, Threat Actors, Cases & External). Each tile shows a live health dot.
+
+> **NetScaler Patch** (Monitors group, port 8121) — watches our own NetScaler gateway
+> for un-applied CVE patches. **Under development, unpublished — runs locally only**, not
+> part of the published soc-* bundle yet. The tile links to it when it is running.
 
 ---
 

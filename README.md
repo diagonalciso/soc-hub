@@ -1,8 +1,14 @@
-# CD-Startpage
+# soc-hub
 
 > SOC operations wall / service portal
 
-A lightweight service dashboard providing quick access links to all CTI/SOC services: SOCops, SBOMguard, SOCint, and Wazuh dashboard.
+A lightweight service dashboard providing quick-access links + live health dots for the
+CTI/SOC fleet: the core services (SOCops, SBOMguard, SOCint, Wazuh) plus the standalone
+soc-* sidecars, grouped on one wall.
+
+> **Under-development, unpublished tools** may also appear as tiles when running locally —
+> e.g. **NetScaler Patch** (port 8121, own-gateway patch monitor). These are not part of the
+> published soc-* bundle; their repos stay local for now.
 
 ---
 
