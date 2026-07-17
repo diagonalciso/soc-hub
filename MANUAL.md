@@ -1,51 +1,67 @@
-# CD-Startpage User Manual
+# soc-hub — User Manual
 
-The **Startpage** is your entry point to the SOC platform.
+**soc-hub** is your entry point to the whole SOC platform: one wall of buttons to
+every tool, plus a live operations dashboard.
 
-When you open it, you see buttons to go to:
-- Threat Intelligence (soc-intel)
-- Alert Queue (soc-ops)
-- SBOM Vulnerabilities (SBOMguard)
-- Agent Health (wazuh)
-- And more...
+Open it at:
+
+```
+http://your-server:8080
+```
+
+(Or whatever port your administrator set.)
 
 ---
 
-## Using the Portal
+## The service wall
 
-### Open Startpage
+Click the **Services** toggle to open the wall. Tiles are grouped into six sections,
+and each tile has a **live health dot** — green means the service is up, red means
+it is down. Click a tile to open that service in a new tab.
 
-```
-http://your-server:80
-```
+**Core Platform** — SOC Ops (alerts), SOC Intel (threat intel), SOC SBOM (CVEs),
+SOC Threatmap (attack map), SOC Roadmap.
 
-(Or whatever port your administrator configured.)
+**Monitors** — SOC Phish, SOC Attack Surface, SOC Canary, SOC Cred Monitor,
+SOC Passive DNS, SOC Supply, NetScaler Patch.
 
-### Click to Navigate
+**Detection & Network** — SOC NIDS, SOC Detections, SOC Validate, SOC OSINT.
 
-Each button takes you to a service. Core:
-- **🌐 Threat Intelligence** → Search external threats
-- **🚨 Alert Queue** → Review and triage security alerts
-- **🔍 SBOM Vulnerabilities** → Check app components for CVEs
-- **💻 Agent Health** → See which computers are online
+**Analyst Tools** — SpiderFoot, CyberChef, EML Analyzer.
 
-The wall also groups the standalone sidecar tools (Monitors, Detection & Network,
-Analyst Tools, Threat Actors, Cases & External). Each tile shows a live health dot.
+**Threat Actors** — SOC Ransomware, SOC ShinyHunters, SOC Qilin.
 
-> **NetScaler Patch** (Monitors group, port 8121) — watches our own NetScaler gateway
-> for un-applied CVE patches. **Under development, unpublished — runs locally only**, not
-> part of the published soc-* bundle yet. The tile links to it when it is running.
+**Cases & External** — SOC IR Cases, IRIS, Wazuh, Wazuh Map.
+
+> **NetScaler Patch** (Monitors, port 8121) watches our own NetScaler gateway for
+> un-applied CVE patches. It is **under development, unpublished — runs locally
+> only**, so its tile only lights up when the tool is running on this box.
+
+---
+
+## The live dashboard
+
+Behind the wall is an auto-refreshing operations view (updates every few seconds):
+
+- **Top KPI bar** — alerts in 24h, critical count, open CVEs, events/min.
+- **Threat Level pill** — NOMINAL → GUARDED → ELEVATED → CRITICAL, derived from
+  alert weight, KEV, and SBOM criticals.
+- **Alert Timeline / Severity / Top Rules / Events-per-minute** — from SOC Ops.
+- **Vulnerability Posture** — your own SBOM inventory (SOC SBOM).
+- **Agent Fleet / Agent Vulnerabilities / Critical CVEs** — from Wazuh. Agents that
+  cycle (like the SV08 printer) show a neutral grey "offline", never an alarm.
+- **Live Alert Stream** — newest SOC Ops alerts; new rows flash green.
+
+If a service is down, its panel simply shows `--` — the rest of the wall keeps working.
 
 ---
 
 ## Bookmarking
 
-Bookmark this page for quick access:
+Bookmark this page for one-click access:
+
 ```
-Ctrl+D (Windows/Linux)
-Cmd+D (Mac)
+Ctrl+D (Windows/Linux)   ·   Cmd+D (Mac)
 ```
 
----
-
-That's it. Startpage is your landing page. Click and explore.
+That's it — soc-hub is your landing page. Click and explore.

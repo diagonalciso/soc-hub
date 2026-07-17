@@ -2,10 +2,10 @@
 
 ## What Is This?
 
-CD-Startpage is a **portal and monitoring dashboard** in one. 
+soc-hub is a **portal and monitoring dashboard** in one (formerly *CD-Startpage*).
 
-At its simplest: links to all 6 services.  
-At its most advanced: live dashboard pulling data from each service, showing real-time metrics.
+At its simplest: a wall of 26 service tiles (six groups) with live health dots.
+At its most advanced: live dashboard pulling data from SOC Ops / SOC SBOM / Wazuh, showing real-time metrics.
 
 The code supports both modes — use as a simple portal, or enhance it to pull live data.
 
@@ -23,7 +23,7 @@ The code supports both modes — use as a simple portal, or enhance it to pull l
 ## Quick Start
 
 ```bash
-cd CD-Startpage
+cd soc-hub
 cp .env.example .env
 python3 server.py
 ```

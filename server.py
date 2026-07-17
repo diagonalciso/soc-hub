@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CD-Startpage: live SOC video-wall dashboard.
+"""soc-hub: live SOC video-wall dashboard + service wall (formerly CD-Startpage).
 
 Aggregates metrics from SOC Ops, SOC SBOM, Wazuh dashboard and SOC Intel into a
 single auto-refreshing operations view.

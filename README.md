@@ -1,20 +1,93 @@
 # soc-hub
 
-> SOC operations wall / service portal
+> SOC operations wall — unified portal + live video-wall dashboard for the CTI/SOC fleet.
 
-A lightweight service dashboard providing quick-access links + live health dots for the
-CTI/SOC fleet: the core services (SOCops, SBOMguard, SOCint, Wazuh) plus the standalone
-soc-* sidecars, grouped on one wall.
+`soc-hub` is the single pane of glass for the whole estate. It does two jobs:
 
-> **Under-development, unpublished tools** may also appear as tiles when running locally —
-> e.g. **NetScaler Patch** (port 8121, own-gateway patch monitor). These are not part of the
-> published soc-* bundle; their repos stay local for now.
+1. **Service wall** — quick-access tiles with live health dots for **26 services**,
+   grouped into six sections (Core Platform, Monitors, Detection & Network, Analyst
+   Tools, Threat Actors, Cases & External).
+2. **Live dashboard** — a background aggregator pulls metrics from SOC Ops, SOC SBOM
+   and the Wazuh collector into an auto-refreshing operations view (alert timeline,
+   severity, MITRE heatmap, agent fleet, CVE posture, live alert stream).
+
+Python **stdlib only**, threaded HTTP server, `.env`-driven. Default port **8080**.
+
+> **History**: `soc-hub` is the evolution of the old *CD-Startpage* portal, and it
+> now also fills the orchestration/overview role that the deprecated *CD-SOC-Bundle*
+> used to hold. There is no separate "bundle" anymore — the fleet is ~50 standalone
+> git repos and `soc-hub` is where they surface together.
+
+> **Under-development tiles**: some tools appear on the wall only when running
+> locally and are **not part of the published fleet** — e.g. **NetScaler Patch**
+> (port 8121, own-gateway CVE patch monitor). Its repo stays local for now.
+
+---
+
+## The 26 services on the wall
+
+Hosts below use the sanitized `10.10.0.40` placeholder (public repo); real addresses
+live only in the gitignored `.env`.
+
+### Core Platform
+| Tile | Port | Repo |
+|---|---|---|
+| SOC Ops | 8081 | `soc-ops` — alert triage + AI enrichment |
+| SOC SBOM | 8082 | `soc-sbom` — SBOM vulnerability tracker |
+| SOC Intel | 8083 | `soc-intel` — STIX 2.1 threat-intel platform |
+| SOC Threatmap | 8100 | `soc-threatmap` — live attack map |
+| SOC Roadmap | 8090 | `soc-roadmap` — unified roadmap portal |
+
+### Monitors
+| Tile | Port | Repo |
+|---|---|---|
+| SOC Phish | 8091 | `soc-phish` — email parser + IOC extraction |
+| SOC Attack Surface | 8092 | `soc-attack-surface` — exposure monitor |
+| SOC Canary | 8093 | `soc-canary` — deception token manager |
+| SOC Cred Monitor | 8094 | `soc-cred-monitor` — breach/credential exposure |
+| SOC Passive DNS | 8095 | `soc-passive-dns` — DNS/subdomain tracking |
+| SOC Supply | 8109 | `soc-supply` — supply-chain monitor |
+| NetScaler Patch | 8121 | `netscaler-patch-monitor` — **under dev, local only, unpublished** |
+
+### Detection & Network
+| Tile | Port | Repo |
+|---|---|---|
+| SOC NIDS | 8102 | `soc-nids` — network IDS view |
+| SOC Detections | 8103 | `soc-detections` — detection rule catalog |
+| SOC Validate | 8104 | `soc-validate` — detection validation |
+| SOC OSINT | 8105 | `soc-osint` — OSINT aggregation |
+
+### Analyst Tools
+| Tile | Port | Repo |
+|---|---|---|
+| SpiderFoot | 8106 | `soc-osint`/SpiderFoot instance |
+| CyberChef | 8107 | CyberChef instance |
+| EML Analyzer | 8108 | EML analyzer instance |
+
+### Threat Actors
+| Tile | Port | Repo |
+|---|---|---|
+| SOC Ransomware | 8096 | `soc-ransomware` — victim/group tracker |
+| SOC ShinyHunters | 8097 | `soc-shinyhunters` — actor monitor |
+| SOC Qilin | 8098 | `soc-qilin` — actor monitor |
+
+### Cases & External
+| Tile | Port | Repo |
+|---|---|---|
+| SOC IR Cases | 8206 | `soc-ir-cases` — IR case manager |
+| IRIS | 8443 (https) | DFIR-IRIS instance |
+| Wazuh | `10.10.0.174` (https) | Wazuh Dashboards UI |
+| Wazuh Map | `10.10.0.174:8100/attackmap` (https) | Wazuh attack map |
+
+Live metrics are aggregated only from **SOC Ops**, **SOC SBOM** and the **Wazuh
+collector** (`:8084`, `WAZUHDATA_URL`); every other entry is a launch tile with a
+health dot.
 
 ---
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.7+ (uses `concurrent.futures`)
 - Linux with systemd (for service install)
 
 ---
@@ -22,17 +95,19 @@ soc-* sidecars, grouped on one wall.
 ## Installation
 
 ```bash
-cd CD-Startpage
+cd soc-hub
 cp .env.example .env
 ```
 
-Edit `.env` to point to your service URLs.
+Edit `.env` to point every `*_URL` at your real service addresses.
 
 ### Run manually
 
 ```bash
-python3 server.py
+python3 server.py            # http://0.0.0.0:8080
 ```
+
+For an ad-hoc port: `STARTPAGE_PORT=8090 python3 server.py`.
 
 ### Install as systemd service
 
@@ -40,39 +115,27 @@ python3 server.py
 sudo cp soc-hub.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now soc-hub
+sudo journalctl -u soc-hub -f
 ```
 
 ---
 
 ## Configuration
 
-Edit `.env`:
+Precedence: **shell env > `.env` file > built-in defaults**.
 
-```
-STARTPAGE_PORT=8080
-STARTPAGE_HOST=0.0.0.0
+| Var | Default | Purpose |
+|---|---|---|
+| `STARTPAGE_PORT` | `8080` | HTTP listen port |
+| `STARTPAGE_HOST` | `0.0.0.0` | Bind address |
+| `SOC_NAME` | `CLAW SOC` | Display name in topbar/title |
+| `METRICS_CACHE_TTL` | `5` | Seconds between background metric refreshes |
+| `METRICS_FETCH_TIMEOUT` | `2.5` | Per-upstream HTTP timeout |
+| `*_URL` (26 tiles) | see `.env.example` | Base URL per service (`SOCOPS_URL`, `SOCINT_URL`, `WAZUHDATA_URL`, …) |
 
-SOCOPS_URL=http://10.10.0.40:8081
-SBOMGUARD_URL=http://10.10.0.40:8082
-SOCINT_URL=http://10.10.0.40:8083
-WAZUH_URL=http://10.10.0.40:8080
-```
-
----
-
-## Architecture
-
-Single-threaded Python HTTP server serving a static dashboard page with configurable service links.
-
-```
-.env (configuration)
-     ↓
-server.py (HTTP server)
-     ↓
-render_index() (dynamic HTML generation)
-     ↓
-Browser (:8080)
-```
+> IPs in `.env.example` and the `server.py` defaults are deliberately sanitized
+> (`10.10.0.x`) because this repo is public. Real addresses live only in the
+> gitignored `.env`. Do not "fix" them.
 
 ---
 
@@ -80,13 +143,21 @@ Browser (:8080)
 
 | Path | Response |
 |------|----------|
-| `/` | Dashboard HTML page |
-| `/api/config` | JSON config object with all service URLs |
+| `/` | Dashboard HTML (template rendered from `.env`) |
+| `/api/metrics` | Aggregated JSON: each upstream's latest payload + health |
+| `/api/health` | Compact `{service: bool}` health map |
+| `/api/config` | Service URLs + `soc_name` |
+| `/dashboard.css`, `/dashboard.js` | Static assets |
+
+Missing/unhealthy upstreams degrade gracefully to `{}` — the frontend renders `--`.
 
 ---
 
 ## Stack
 
-- Python stdlib only (no pip install)
-- Inline HTML generation
-- Single-file deployment
+- Python stdlib only (no pip install); Chart.js is the only browser CDN dependency
+- Threaded HTTP server, parallel upstream fetches via `concurrent.futures`
+- 5s cache + background refresher → page stays snappy even if upstreams stall
+
+See `CLAUDE.md` for aggregator internals, panel-by-panel data sources, and the
+add-an-upstream recipe. See `ADMIN.md` for deploy/backup/troubleshooting.
