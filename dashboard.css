@@ -321,16 +321,17 @@ body::after {
   min-height: 0;
 }
 
-/* Panel placement (12x12 grid) */
-#panel-timeline { grid-column: 1 / span 5;  grid-row: 1 / span 5; }
-#panel-map      { grid-column: 6 / span 4;  grid-row: 1 / span 8; }
-#panel-severity { grid-column: 10 / span 3; grid-row: 1 / span 4; }
-#panel-rules    { grid-column: 1 / span 3;  grid-row: 6 / span 4; }
-#panel-eps      { grid-column: 4 / span 2;  grid-row: 6 / span 4; }
-#panel-cves     { grid-column: 10 / span 3; grid-row: 5 / span 4; }
-#panel-mitre    { grid-column: 10 / span 3; grid-row: 9 / span 4; }
-#panel-stream   { grid-column: 1 / span 6;  grid-row: 10 / span 3; }
-#panel-honeypot { grid-column: 7 / span 3;  grid-row: 9 / span 4; }
+/* Panel placement (12x12 grid) — every cell filled exactly once */
+#panel-timeline { grid-column: 1 / span 8;  grid-row: 1 / span 4; }
+#panel-severity { grid-column: 9 / span 4;  grid-row: 1 / span 4; }
+#panel-agents   { grid-column: 1 / span 3;  grid-row: 5 / span 3; }
+#panel-wvulns   { grid-column: 4 / span 3;  grid-row: 5 / span 3; }
+#panel-wcves    { grid-column: 7 / span 6;  grid-row: 5 / span 3; }
+#panel-rules    { grid-column: 1 / span 4;  grid-row: 8 / span 3; }
+#panel-eps      { grid-column: 5 / span 4;  grid-row: 8 / span 3; }
+#panel-cves     { grid-column: 9 / span 4;  grid-row: 8 / span 3; }
+#panel-mitre    { grid-column: 1 / span 6;  grid-row: 11 / span 2; }
+#panel-stream   { grid-column: 7 / span 6;  grid-row: 11 / span 2; }
 
 /* ── Panel ──────────────────────────────────────────────────────────────── */
 .panel {
@@ -401,32 +402,6 @@ body::after {
 .chart-wrap { padding: 8px; }
 .chart-wrap canvas { width: 100% !important; height: 100% !important; max-height: 100%; }
 
-/* ── Map ────────────────────────────────────────────────────────────────── */
-#map {
-  flex: 1; width: 100%; min-height: 200px;
-  background: #02060d;
-  filter: hue-rotate(160deg) saturate(0.6) brightness(0.7);
-}
-.leaflet-container { background: #02060d; }
-.attack-marker {
-  width: 10px; height: 10px;
-  background: var(--crit);
-  border-radius: 50%;
-  box-shadow: 0 0 10px var(--crit), 0 0 20px rgba(255, 56, 96, 0.6);
-  animation: pingPulse 2s ease-out infinite;
-}
-@keyframes pingPulse {
-  0%   { transform: scale(0.6); opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-.attack-marker-core {
-  position: absolute;
-  width: 8px; height: 8px;
-  background: var(--crit);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--crit);
-}
-
 /* ── Lists / Stats ──────────────────────────────────────────────────────── */
 .ranked-list { list-style: none; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
 .ranked-list li {
@@ -455,6 +430,36 @@ body::after {
   font-family: var(--display);
 }
 .ranked-list li.empty { color: var(--text-dim); border-left-color: var(--text-dim); justify-content: center; display: block; text-align: center; }
+.ranked-list.compact li { font-size: 0.68rem; padding: 3px 6px; }
+
+/* ── Agent fleet ────────────────────────────────────────────────────────────
+   Agents here cycle by design (SV08 is a printer, up only when printing), so
+   "down" uses the neutral --offline grey, never the alarm red of --crit. */
+.agent-list { list-style: none; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
+.agent-list li {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 6px;
+  background: rgba(0, 255, 136, 0.04);
+  border-left: 2px solid var(--accent);
+  font-size: 0.72rem;
+}
+.agent-list li .dot { width: 7px; height: 7px; border-radius: 50%; }
+.agent-list li.up   .dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.agent-list li.down .dot { background: var(--offline); }
+.agent-list li.down { background: rgba(90, 104, 120, 0.06); border-left-color: var(--offline); }
+.agent-list li.down .name { color: var(--text-dim); }
+.agent-list li .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-list li .agent-os {
+  grid-column: 2; grid-row: 2;
+  font-size: 0.62rem; color: var(--text-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.agent-list li .agent-seen { font-family: var(--mono); font-size: 0.62rem; color: var(--text-dim); white-space: nowrap; }
+.agent-list li.empty { color: var(--text-dim); border-left-color: var(--text-dim); display: block; text-align: center; }
+.mono { font-family: var(--mono); }
 
 .big-stats {
   display: grid;
@@ -629,17 +634,32 @@ body::after {
   .topbar-center, .topbar-right { justify-content: flex-start; flex-wrap: wrap; }
   .grid {
     grid-template-columns: repeat(6, 1fr);
-    grid-template-rows: repeat(16, minmax(110px, auto));
+    /* Must equal the last row used below: every declared row claims its
+       110px floor whether or not a panel occupies it. */
+    grid-template-rows: repeat(15, minmax(110px, auto));
   }
   #panel-timeline { grid-column: 1 / span 6; grid-row: 1 / span 2; }
-  #panel-map      { grid-column: 1 / span 6; grid-row: 3 / span 3; }
-  #panel-severity { grid-column: 1 / span 3; grid-row: 6 / span 2; }
-  #panel-cves     { grid-column: 4 / span 3; grid-row: 6 / span 2; }
-  #panel-rules    { grid-column: 1 / span 3; grid-row: 8 / span 2; }
-  #panel-eps      { grid-column: 4 / span 3; grid-row: 8 / span 2; }
-  #panel-mitre    { grid-column: 1 / span 3; grid-row: 10 / span 2; }
-  #panel-honeypot { grid-column: 4 / span 3; grid-row: 10 / span 2; }
-  #panel-stream   { grid-column: 1 / span 6; grid-row: 12 / span 3; }
+  #panel-severity { grid-column: 1 / span 3; grid-row: 3 / span 2; }
+  #panel-cves     { grid-column: 4 / span 3; grid-row: 3 / span 2; }
+  #panel-agents   { grid-column: 1 / span 3; grid-row: 5 / span 2; }
+  #panel-wvulns   { grid-column: 4 / span 3; grid-row: 5 / span 2; }
+  #panel-wcves    { grid-column: 1 / span 6; grid-row: 7 / span 2; }
+  #panel-rules    { grid-column: 1 / span 3; grid-row: 9 / span 2; }
+  #panel-eps      { grid-column: 4 / span 3; grid-row: 9 / span 2; }
+  #panel-mitre    { grid-column: 1 / span 6; grid-row: 11 / span 2; }
+  #panel-stream   { grid-column: 1 / span 6; grid-row: 13 / span 3; }
   html, body { overflow: auto; }
   .wall { height: auto; }
+}
+
+/* ── Wide but short viewports (e.g. tablet in landscape) ────────────────────
+   Too wide for the <=1200px branch above, too short for a 12-row wall: rows
+   collapse to ~34px and every panel clips its own content. Give the wall a
+   definite height taller than the viewport and let the page scroll to it.
+   The height MUST stay a definite length — `auto` would leave the 1fr rows
+   without a reference and collapse the layout. Placement rules are untouched,
+   so the arrangement is identical, just taller. */
+@media (min-width: 1201px) and (max-height: 900px) {
+  html, body { height: auto; overflow-y: auto; }
+  .wall { height: 1100px; }
 }

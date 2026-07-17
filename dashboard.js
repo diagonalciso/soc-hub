@@ -2,31 +2,25 @@
 'use strict';
 
 const REFRESH_MS = 5000;
-const CLOCK_TZ_LABEL = 'UTC';
+const CLOCK_TZ_LABEL = (() => {
+  try {
+    const tz = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+      .formatToParts(new Date())
+      .find(p => p.type === 'timeZoneName');
+    if (tz && tz.value) return tz.value;
+  } catch (e) { /* fall through */ }
+  const off = -new Date().getTimezoneOffset();
+  const sign = off < 0 ? '-' : '+';
+  const abs = Math.abs(off);
+  return `UTC${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+})();
 let refreshTimer = null;
 let countdownTimer = null;
 let countdownLeft = REFRESH_MS / 1000;
 let lastAlertIds = new Set();
 
-/* ── Country centroids for attacker map ────────────────────────────────── */
-const COUNTRY_COORDS = {
-  US:[39.8,-98.6],GB:[54.0,-2.5],DE:[51.2,10.5],FR:[46.6,2.2],NL:[52.1,5.3],RU:[61.5,105.3],
-  CN:[35.9,104.2],JP:[36.2,138.3],KR:[36.0,128.0],IN:[20.6,78.9],BR:[-14.2,-51.9],CA:[56.1,-106.3],
-  AU:[-25.3,133.8],MX:[23.6,-102.5],IT:[41.9,12.6],ES:[40.5,-3.7],PL:[51.9,19.1],UA:[48.4,31.2],
-  TR:[38.96,35.2],SA:[23.9,45.1],IR:[32.4,53.7],PK:[30.4,69.3],BD:[23.7,90.4],ID:[-0.8,113.9],
-  VN:[14.1,108.3],TH:[15.9,100.99],SG:[1.35,103.8],HK:[22.3,114.1],TW:[23.7,121.0],PH:[13.0,122.0],
-  MY:[4.2,101.97],ZA:[-30.6,22.9],EG:[26.8,30.8],NG:[9.1,8.7],KE:[-0.0,37.9],ET:[9.1,40.5],
-  AR:[-38.4,-63.6],CL:[-35.7,-71.5],CO:[4.6,-74.3],PE:[-9.2,-75.0],VE:[6.4,-66.6],
-  SE:[60.1,18.6],NO:[60.5,8.5],FI:[61.9,25.7],DK:[56.3,9.5],BE:[50.5,4.5],CH:[46.8,8.2],
-  AT:[47.5,14.6],CZ:[49.8,15.5],PT:[39.4,-8.2],GR:[39.1,21.8],RO:[45.9,24.97],IE:[53.1,-7.7],
-  IL:[31.0,34.85],AE:[23.4,53.85],QA:[25.3,51.2],KZ:[48.0,66.9],UZ:[41.4,64.6],BY:[53.7,27.95],
-  RS:[44.0,21.0],HU:[47.2,19.5],SK:[48.7,19.7],BG:[42.7,25.5],HR:[45.1,15.2],LT:[55.2,23.9],
-  LV:[56.9,24.6],EE:[58.6,25.0],MD:[47.4,28.4],GE:[42.3,43.4],AM:[40.1,45.0],AZ:[40.1,47.6],
-  ZZ:[0,0]
-};
-
 /* ── State ────────────────────────────────────────────────────────────── */
-const state = { metrics: null, charts: {}, map: null, attackLayer: null };
+const state = { metrics: null, charts: {} };
 
 /* ── Utilities ────────────────────────────────────────────────────────── */
 const $ = (sel) => document.querySelector(sel);
@@ -47,6 +41,20 @@ function severityClass(level) {
   if (/(low|sev[_-]?2|^2$)/.test(s)) return 'low';
   return 'info';
 }
+// Wazuh's stock "critical" is rule.level >= 12, but this estate's rules top
+// out at 10, so that tile could only ever read 0. Level 9+ is the real
+// critical band here (25 at L9, 18 at L10 over 7d).
+const CRITICAL_LEVEL = 9;
+
+// True 24h count from Wazuh's by_level aggregate. The soc-ops alert list is
+// only a 15-row sample, so counting criticals from it under-reports badly.
+function criticalFromWazuh(m) {
+  const levels = m.wazuh?.alerts_24h?.by_level;
+  if (!Array.isArray(levels) || !levels.length) return null;
+  return levels.reduce(
+    (n, b) => (Number(b.label) >= CRITICAL_LEVEL ? n + (Number(b.count) || 0) : n), 0);
+}
+
 function severityScore(counts) {
   return (counts.critical || 0) * 8 + (counts.high || 0) * 3 + (counts.medium || 0) * 1;
 }
@@ -64,18 +72,17 @@ function severityFromAlerts(alerts) {
   return out;
 }
 
-function honeypotEPS(stats) {
-  const arr = stats?.activity;
-  if (!Array.isArray(arr) || !arr.length) return 0;
-  const tail = arr.slice(-5);
-  return tail.reduce((s, n) => s + (Number(n) || 0), 0);
+// Alerts in the most recent 5-minute bucket of the fine-grained soc-ops timeline.
+function recentAlertRate(fine) {
+  if (!Array.isArray(fine) || !fine.length) return 0;
+  return Number(fine[fine.length - 1].count) || 0;
 }
 
 /* ── Clock ─────────────────────────────────────────────────────────────── */
 function tickClock() {
   const d = new Date();
-  $('#clock-time').textContent = `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())}`;
-  $('#clock-date').textContent = `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${CLOCK_TZ_LABEL}`;
+  $('#clock-time').textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  $('#clock-date').textContent = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${CLOCK_TZ_LABEL}`;
 }
 setInterval(tickClock, 1000); tickClock();
 
@@ -91,45 +98,6 @@ if (window.Chart) {
   Chart.defaults.plugins.tooltip.borderWidth = 1;
   Chart.defaults.plugins.tooltip.titleColor = '#00ff88';
   Chart.defaults.plugins.tooltip.bodyColor = '#c8d6e0';
-}
-
-/* ── Map ──────────────────────────────────────────────────────────────── */
-function initMap() {
-  if (!window.L || state.map) return;
-  state.map = L.map('map', {
-    zoomControl: false, attributionControl: false,
-    worldCopyJump: true, minZoom: 1, maxZoom: 4,
-    scrollWheelZoom: false, doubleClickZoom: false, dragging: true,
-  }).setView([20, 10], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    subdomains: 'abcd', maxZoom: 4, noWrap: false,
-  }).addTo(state.map);
-  state.attackLayer = L.layerGroup().addTo(state.map);
-}
-
-function renderAttackMap(ips) {
-  if (!state.map || !state.attackLayer) return;
-  state.attackLayer.clearLayers();
-  if (!ips || !ips.length) return;
-  const counts = {};
-  ips.forEach(entry => {
-    const code = (entry.country || 'ZZ').toUpperCase();
-    counts[code] = (counts[code] || 0) + 1;
-  });
-  Object.entries(counts).forEach(([code, count]) => {
-    const coord = COUNTRY_COORDS[code];
-    if (!coord || (coord[0] === 0 && coord[1] === 0)) return;
-    const radius = Math.min(28, 6 + Math.log2(count + 1) * 4);
-    const html = `
-      <div style="position:relative;width:${radius*2}px;height:${radius*2}px;display:flex;align-items:center;justify-content:center;">
-        <div class="attack-marker" style="width:${radius*2}px;height:${radius*2}px"></div>
-        <div class="attack-marker-core" style="width:8px;height:8px;"></div>
-      </div>`;
-    const icon = L.divIcon({ html, className: 'attack-marker-wrap', iconSize: [radius*2, radius*2] });
-    L.marker(coord, { icon, interactive: true })
-      .bindTooltip(`${code} · ${count} probe${count !== 1 ? 's' : ''}`, { permanent: false, direction: 'top' })
-      .addTo(state.attackLayer);
-  });
 }
 
 /* ── Charts ───────────────────────────────────────────────────────────── */
@@ -218,7 +186,6 @@ function renderHealth(health, urls) {
 function renderHeaderKPIs(m) {
   const stats = m.socops?.stats || {};
   const kpis  = m.socops?.kpis  || {};
-  const honey = m.honeypot?.stats || {};
   const sbom  = m.sbomguard?.stats || {};
 
   const alertsArr = Array.isArray(m.socops?.alerts) ? m.socops.alerts
@@ -226,17 +193,16 @@ function renderHeaderKPIs(m) {
   const sevCounts = severityFromAlerts(alertsArr);
 
   const alerts24 = kpis.alerts_last_24h ?? kpis.alerts_24h ?? stats.today ?? stats.total ?? null;
-  const critical = sevCounts.critical || sbom.critical || 0;
-  const probes   = honey.total ?? null;
+  const wzCrit   = criticalFromWazuh(m);
+  const critical = wzCrit !== null ? wzCrit : (sevCounts.critical || 0);
   const cves     = sbom.new_matches ?? sbom.total_cves ?? null;
-  const eps      = honeypotEPS(honey);
+  const eps      = recentAlertRate(m.socops?.timeline_fine);
 
   $('#hdr-alerts24').textContent = alerts24 != null ? fmt(alerts24) : '--';
   $('#hdr-critical').textContent = critical != null ? fmt(critical) : '--';
-  $('#hdr-probes').textContent   = probes   != null ? fmt(probes)   : '--';
   $('#hdr-cves').textContent     = cves     != null ? fmt(cves)     : '--';
   $('#hdr-eps').textContent      = eps      != null ? fmt(eps)      : '--';
-  $('#meta-eps').textContent     = 'last 5 min · honeypot';
+  $('#meta-eps').textContent     = 'last 5 min · soc-ops';
 
   // Threat = combined SOCops crit/high alerts + KEV exposure
   const score = severityScore(sevCounts) + (sbom.kev_matches || 0) * 0.005 + (sbom.critical || 0) * 0.01;
@@ -251,7 +217,6 @@ function renderHeaderKPIs(m) {
 }
 
 function renderTimeline(m) {
-  // Prefer SOCops timeline; if empty, derive from honeypot 60-min activity (still SOC-meaningful)
   const tl = m.socops?.timeline;
   let labels = [], data = [], source = 'soc-ops';
   if (Array.isArray(tl) && tl.length) {
@@ -265,24 +230,15 @@ function renderTimeline(m) {
       data.push(p.value ?? p[1] ?? 0);
     });
   } else {
-    // fallback: honeypot 60-min activity
-    const arr = m.honeypot?.stats?.activity;
-    if (Array.isArray(arr) && arr.length) {
-      const now = new Date();
-      arr.forEach((v, i) => {
-        const minsAgo = arr.length - 1 - i;
-        labels.push(`-${minsAgo}m`);
-        data.push(Number(v) || 0);
-      });
-      source = 'Honeypot · 60min';
-    } else {
-      const now = new Date();
-      for (let i = 23; i >= 0; i--) {
-        const d = new Date(now.getTime() - i * 3600 * 1000);
-        labels.push(pad2(d.getUTCHours()) + 'h');
-        data.push(0);
-      }
+    // No substitute source: an empty timeline renders as an honest empty 24h axis
+    // rather than silently borrowing another feed's data under this panel's label.
+    const now = new Date();
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 3600 * 1000);
+      labels.push(pad2(d.getHours()) + 'h');
+      data.push(0);
     }
+    source = 'soc-ops · no data';
   }
   $('#meta-timeline').textContent = source;
   if (state.charts.timeline) {
@@ -335,16 +291,16 @@ function renderRules(m) {
 }
 
 function renderEPS(m) {
-  // Live events/min sparkline driven by honeypot 60-min activity (resolved per minute)
-  const arr = m.honeypot?.stats?.activity;
+  // Alert rate sparkline: 5-minute buckets from soc-ops over the last 2h.
+  const fine = m.socops?.timeline_fine;
   let labels = [], data = [];
-  if (Array.isArray(arr) && arr.length) {
-    arr.slice(-30).forEach((v, i, slice) => {
-      labels.push(`-${slice.length - 1 - i}m`);
-      data.push(Number(v) || 0);
+  if (Array.isArray(fine) && fine.length) {
+    fine.slice(-24).forEach(p => {
+      labels.push(p.label || '');
+      data.push(Number(p.count) || 0);
     });
   } else {
-    for (let i = 29; i >= 0; i--) { labels.push(`-${i}m`); data.push(0); }
+    for (let i = 23; i >= 0; i--) { labels.push(`-${i * 5}m`); data.push(0); }
   }
   if (state.charts.eps) {
     state.charts.eps.data.labels = labels;
@@ -353,6 +309,92 @@ function renderEPS(m) {
   } else {
     state.charts.eps = buildLineChart('chart-eps', labels, data, '#00ccff');
   }
+}
+
+function agentSeen(iso) {
+  // Agents here cycle by design (SV08 is a printer, only up when printing),
+  // so last-seen is neutral context, not an alarm.
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const mins = Math.max(0, Math.floor((Date.now() - then) / 60000));
+  if (mins < 60)   return `${mins}m ago`;
+  if (mins < 1440) return `${Math.floor(mins / 60)}h ago`;
+  return `${Math.floor(mins / 1440)}d ago`;
+}
+
+function renderAgents(m) {
+  const agents = Array.isArray(m.wazuh?.agents) ? m.wazuh.agents : [];
+  const ul = $('#agent-list');
+  if (!agents.length) {
+    ul.innerHTML = '<li class="empty">no agent data</li>';
+    $('#meta-agents').textContent = 'wazuh · no data';
+    return;
+  }
+  const c = m.wazuh?.agent_count || {};
+  $('#meta-agents').textContent = `${c.active ?? '?'}/${c.total ?? agents.length} reporting`;
+  ul.innerHTML = agents.map(a => {
+    const active = a.status === 'active';
+    // The collector flattens os to a plain string ("Debian GNU/Linux"),
+    // falling back to platform; it is not a nested object.
+    const os = a.os || a.platform || '';
+    const tip = [a.id, a.ip, a.version].filter(Boolean).join(' · ');
+    return `<li class="agent ${active ? 'up' : 'down'}">`
+         + `<span class="dot"></span>`
+         + `<span class="name" title="${esc(tip)}">${esc(a.name)}</span>`
+         + `<span class="agent-os" title="${esc(os)}">${esc(os)}</span>`
+         + `<span class="agent-seen">${esc(agentSeen(a.lastKeepAlive))}</span>`
+         + `</li>`;
+  }).join('');
+}
+
+function renderWazuhVulns(m) {
+  const v = m.wazuh?.vulnerabilities || {};
+  const map = { critical: v.critical, high: v.high, medium: v.medium, low: v.low };
+  $$('#wvuln-stats .stat-num').forEach(el => {
+    const val = map[el.dataset.key];
+    el.textContent = (val === undefined || val === null) ? '--' : fmt(val);
+  });
+  $('#meta-wvulns').textContent = v.total ? `${fmt(v.total)} total · wazuh` : 'wazuh · no data';
+
+  const byAgent = Array.isArray(v.by_agent) ? v.by_agent : [];
+  const seen = {};
+  (m.wazuh?.agents || []).forEach(a => { seen[a.name] = a; });
+  const ul = $('#wvuln-agents');
+  if (!byAgent.length) {
+    ul.innerHTML = '<li class="empty">no vulnerability data</li>';
+    return;
+  }
+  ul.innerHTML = byAgent.slice(0, 6).map((b, i) => {
+    const a = seen[b.label];
+    const when = a ? agentSeen(a.lastKeepAlive) : '';
+    return `<li><span class="rank">${i + 1}</span>`
+         + `<span class="name" title="${esc(b.label)}">${esc(b.label)}`
+         + (when ? ` <span class="agent-seen">${esc(when)}</span>` : '')
+         + `</span><span class="count">${fmt(b.count)}</span></li>`;
+  }).join('');
+}
+
+function renderWazuhCVEs(m) {
+  const cves = Array.isArray(m.wazuh?.critical_cves) ? m.wazuh.critical_cves : [];
+  const tb = $('#wcve-list');
+  if (!cves.length) {
+    tb.innerHTML = '<tr class="empty"><td colspan="5">no critical CVEs</td></tr>';
+    $('#meta-wcves').textContent = 'wazuh · no data';
+    return;
+  }
+  $('#meta-wcves').textContent = `wazuh · ${cves.length}`;
+  tb.innerHTML = cves.map(c => {
+    const score = (c.score === '' || c.score === null || c.score === undefined)
+      ? '--' : Number(c.score).toFixed(1);
+    return `<tr>`
+         + `<td><span class="sev-pill crit">${esc(score)}</span></td>`
+         + `<td class="mono">${esc(c.cve)}</td>`
+         + `<td>${esc(c.agent)}</td>`
+         + `<td title="${esc(c.package)}">${esc(String(c.package).slice(0, 28))}</td>`
+         + `<td title="${esc(c.title)}">${esc(String(c.title).slice(0, 70))}</td>`
+         + `</tr>`;
+  }).join('');
 }
 
 function renderCVE(m) {
@@ -374,7 +416,7 @@ function renderCVE(m) {
   let feedLabel = '--';
   if (feedTs) {
     const d = new Date(feedTs);
-    if (!isNaN(d.getTime())) feedLabel = `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
+    if (!isNaN(d.getTime())) feedLabel = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   } else if (Object.keys(f).length) {
     feedLabel = 'OK';
   }
@@ -449,70 +491,23 @@ function renderStream(m) {
   lastAlertIds = seen;
 }
 
-function renderHoneypotChart(m) {
-  // Render top probe types as bar chart (more SOC-meaningful than activity, which is on the EPS panel)
-  const stats = m.honeypot?.stats || {};
-  const byType = stats.by_type || {};
-  const entries = Object.entries(byType).slice(0, 6);
-  let labels = entries.map(([k]) => k.replace(/_/g, ' '));
-  let data = entries.map(([, v]) => Number(v) || 0);
-  if (!labels.length) {
-    labels = ['Total', 'Creds', 'CVEs', 'Users'];
-    data = [
-      stats.total || 0,
-      stats.cred_count || 0,
-      Object.keys(stats.by_cve || {}).length,
-      Array.isArray(stats.unique_users) ? stats.unique_users.length : (stats.unique_users || 0),
-    ];
-  }
-  const colors = data.map((_, i) => {
-    const palette = [
-      'rgba(255, 56, 96, 0.7)',
-      'rgba(255, 176, 0, 0.7)',
-      'rgba(0, 204, 255, 0.7)',
-      'rgba(0, 255, 136, 0.7)',
-      'rgba(255, 94, 196, 0.7)',
-      'rgba(160, 130, 255, 0.7)',
-    ];
-    return palette[i % palette.length];
-  });
-  if (state.charts.honeypot && state.charts.honeypot.config.type === 'bar') {
-    state.charts.honeypot.data.labels = labels;
-    state.charts.honeypot.data.datasets[0].data = data;
-    state.charts.honeypot.data.datasets[0].backgroundColor = colors;
-    state.charts.honeypot.update('none');
-  } else {
-    if (state.charts.honeypot) { state.charts.honeypot.destroy(); state.charts.honeypot = null; }
-    state.charts.honeypot = buildBarChart('chart-honeypot', labels, data, colors);
-  }
-}
-
 function renderTicker(m) {
-  const events = m.honeypot?.events?.events || m.honeypot?.events || [];
-  const items = (Array.isArray(events) ? events : []).slice(0, 25).map(e => {
-    const ip = esc(e.src_ip || '?');
-    const path = esc(e.path || '');
-    const cve = e.cve ? `<span class="cve">${esc(e.cve)}</span>` : '';
-    const alert = e.alert ? `<span class="alert">${esc(e.alert)}</span>` : '';
-    return `<span class="ev">▸ <span class="ip">${ip}</span> ${alert} ${cve} ${path}</span>`;
+  const alerts = Array.isArray(m.socops?.alerts) ? m.socops.alerts
+               : (Array.isArray(m.socops?.alerts?.alerts) ? m.socops.alerts.alerts : []);
+  const items = alerts.slice(0, 25).map(a => {
+    const agent = esc(a.agent_name || a.agent_ip || '?');
+    const desc  = esc(a.rule_description || '');
+    const lvl   = Number(a.rule_level ?? 0);
+    const sev   = severityClass(lvl >= 12 ? 'critical' : lvl >= 8 ? 'high' : lvl >= 4 ? 'medium' : 'low');
+    const src   = a.srcip ? `<span class="ip">${esc(a.srcip)}</span>` : '';
+    return `<span class="ev">▸ <span class="ip">${agent}</span> `
+         + `<span class="alert ${sev}">L${lvl}</span> ${src} ${desc}</span>`;
   });
   if (!items.length) {
-    const ips = m.honeypot?.ips?.ips || [];
-    if (ips.length) {
-      const sample = ips.slice(0, 30).map(i => `<span class="ev">▸ <span class="ip">${esc(i.ip)}</span> ${esc(i.country || '')}</span>`).join('');
-      $('#log-ticker').innerHTML = sample || '▸ no honeypot activity';
-    } else {
-      $('#log-ticker').innerHTML = '▸ no honeypot activity';
-    }
+    $('#log-ticker').innerHTML = '▸ no alerts';
     return;
   }
   $('#log-ticker').innerHTML = items.join('') + items.join('');
-}
-
-function renderMap(m) {
-  const ips = m.honeypot?.ips?.ips || [];
-  renderAttackMap(ips);
-  $('#meta-map').textContent = `honeypot · ${ips.length} unique`;
 }
 
 /* ── Refresh loop ─────────────────────────────────────────────────────── */
@@ -545,11 +540,12 @@ async function refresh() {
   renderRules(m);
   renderEPS(m);
   renderCVE(m);
+  renderAgents(m);
+  renderWazuhVulns(m);
+  renderWazuhCVEs(m);
   renderMITRE(m);
   renderStream(m);
-  renderHoneypotChart(m);
   renderTicker(m);
-  renderMap(m);
 
   const t = new Date(m.ts * 1000);
   $('#last-update').textContent = `last refresh: ${pad2(t.getHours())}:${pad2(t.getMinutes())}:${pad2(t.getSeconds())}`;
@@ -589,7 +585,6 @@ function initLauncher() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initMap();
   initLauncher();
   startLoop();
   dismissBoot();

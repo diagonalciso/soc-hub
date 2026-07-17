@@ -13,7 +13,7 @@ The code supports both modes — use as a simple portal, or enhance it to pull l
 - No pip dependencies — Python stdlib only
 - Threaded HTTP server, parallel upstream fetches via `concurrent.futures`
 - 5s cache + background refresher → page stays snappy even if upstreams stall
-- Browser uses Chart.js + Leaflet (CDN) for charts and the world map
+- Browser uses Chart.js (CDN) for charts
 - Configurable via `.env`
 - Python 3.7+ (uses `concurrent.futures`)
 - Default port 8080
@@ -50,8 +50,8 @@ Shell env wins over `.env`, which wins over built-in defaults.
 .env ─► load_env() ─► collect_metrics()  ──► ThreadPoolExecutor
                            │                  ├─► SOCops    /api/{stats,kpis,mitre,rules,timeline,alerts}
                            │                  ├─► SBOMguard /api/{stats,feed-status,matches}
-                           │                  ├─► Honeypot  /api/{stats,unique-ips,events}
-                           │                  └─► Wazuh     /api/data
+                           │                  └─► wazuh-mods collector :8084 /api/data
+                           │                        (agents, vulnerabilities, MITRE, critical CVEs)
                            ▼
                     in-memory cache  ◄── /api/metrics  (JSON)
                                           /api/health   (JSON, just service health)
@@ -62,8 +62,7 @@ Shell env wins over `.env`, which wins over built-in defaults.
                        Browser
                            │
                            ├─ polls /api/metrics every 5s
-                           ├─ Chart.js: timeline, EPS sparkline, severity donut, honeypot bars
-                           ├─ Leaflet: dark world map with attacker pings
+                           ├─ Chart.js: timeline, EPS sparkline, severity donut
                            └─ DOM: KPI tiles, MITRE heatmap, rule list, live alert stream, log ticker
 ```
 
@@ -89,7 +88,10 @@ soc-hub.service systemd unit
 | `SOC_NAME` | `CLAW SOC` | Display name in topbar/title |
 | `METRICS_CACHE_TTL` | `5` | Seconds between background metric refreshes |
 | `METRICS_FETCH_TIMEOUT` | `2.5` | Per-upstream HTTP timeout |
-| `SOCOPS_URL` / `SBOMGUARD_URL` / `SOCINT_URL` / `HONEYPOT_URL` / `WAZUH_URL` | see `.env.example` | Upstream service base URLs |
+| `SOCOPS_URL` / `SBOMGUARD_URL` / `SOCINT_URL` / `WAZUH_URL` | see `.env.example` | Upstream service base URLs |
+| `WAZUHDATA_URL` | `:8084` | wazuh-mods collector (`dashboard.py`) `/api/data`. Distinct from `WAZUH_URL`, which is the Wazuh Dashboards UI the launcher links to. |
+
+> IPs in `.env.example` and the `server.py` defaults are **deliberately sanitized** (`10.10.0.x`) because this repo is public. Real addresses live only in the gitignored `.env`. Do not "fix" them.
 
 ---
 
@@ -109,10 +111,9 @@ soc-hub.service systemd unit
   "ts": 1234567890.0,
   "soc_name": "CLAW SOC",
   "urls":   {"socops": "...", "sbomguard": "...", ...},
-  "health": {"socops": true,  "sbomguard": true,  "socint": true,  "honeypot": true,  "wazuh": false},
-  "socops":    {"stats": {...}, "kpis": {...}, "mitre": {...}, "rules": [...], "timeline": [...], "alerts": [...]},
+  "health": {"socops": true,  "sbomguard": true,  "socint": true,  "wazuh": false},
+  "socops":    {"stats": {...}, "kpis": {...}, "mitre": {...}, "rules": [...], "timeline": [...], "timeline_fine": [...], "alerts": [...]},
   "sbomguard": {"stats": {...}, "feed":  {...}, "matches": [...]},
-  "honeypot":  {"stats": {...}, "ips":   {...}, "events":  {...}},
   "wazuh":     {...}
 }
 ```
@@ -125,19 +126,20 @@ Missing/unhealthy upstreams just produce `{}` for that block — the frontend de
 
 | Panel | Source | Behaviour |
 |---|---|---|
-| Top KPI bar | SOCops kpis + honeypot + SBOM | Alerts/24h, critical (computed from latest alert sample), probes, open CVEs, EPS |
+| Top KPI bar | SOCops kpis + SBOM + Wazuh | Alerts/24h, **CRIT 24H · L9+** (true 24h count from `wazuh.alerts_24h.by_level`), open CVEs, EPS |
 | Threat Level pill | Derived | Crit + high alert weight + KEV + SBOM critical → NOMINAL / GUARDED / ELEVATED / CRITICAL |
 | Service health pills | `/api/health` | Green dot up, red dot pulsing if down. Click → opens that service. |
-| Alert Timeline (24h) | `socops.timeline` if non-empty, else honeypot 60-min activity | Line chart |
-| Attacker Origin Map | `honeypot.ips.ips` country codes mapped via centroid table | Pulsing pings on dark Leaflet basemap |
+| Alert Timeline (24h) | `socops.timeline` (hourly buckets, system local time) | Line chart; empty renders an honest zeroed axis — there is deliberately no substitute source |
 | Severity Distribution | computed from latest 15 SOCops alerts (rule_level → crit/high/med/low) | Doughnut |
 | Top Rules | `socops.rules` (`rule_description`, `total`) | Ranked list |
-| Events / Min | honeypot 60-min `activity` array | Sparkline (last 30 minutes) |
+| Events / Min | `socops.timeline_fine` (5-min buckets over 2h) | Sparkline (last 24 buckets) |
 | Vulnerability Posture | `sbomguard.stats` (`critical`, `new_matches`, `total_cves`, `kev_matches`) | Big stats |
-| MITRE ATT&CK | `socops.mitre` `{tactic: {count, techniques}}` | Heatmap cells |
+| Agent Fleet | `wazuh.agents` + `agent_count` | Per-agent status/OS/last-seen. Agents cycle by design (SV08 is a printer, up only when printing), so "down" uses neutral `--offline` grey — **never** an alarm state. |
+| Agent Vulnerabilities | `wazuh.vulnerabilities` | Wazuh's vuln detector scanning packages on agents. Raw totals, all agents. Distinct from Vulnerability Posture, which is your own SBOM inventory. |
+| Critical CVEs · Wazuh Agents | `wazuh.critical_cves` | CVSS + CVE + agent + package + description |
+| MITRE ATT&CK | `socops.mitre` `{tactic: {count, techniques}}` | Heatmap cells. Kept on soc-ops: Wazuh's collector only aggregates MITRE over 24h (4 technique buckets, mostly registry churn), while soc-ops gives 6 tactics with nested techniques. Both originate from Wazuh. |
 | Live Alert Stream | `socops.alerts` | Table; new rows flash green |
-| Honeypot Activity | `honeypot.stats.by_type` | Bar chart |
-| Log ticker | `honeypot.events.events` | Scrolling marquee |
+| Log ticker | `socops.alerts` (agent, rule level, srcip, description) | Scrolling marquee |
 
 The frontend is permissive about upstream shape changes: every renderer falls
 back to alternate field names (`row.name || row.rule || row.rule_id` etc.) and
@@ -206,10 +208,10 @@ server {
 - Aggregator runs upstream fetches in parallel; total wall time ≈ slowest upstream, capped by `METRICS_FETCH_TIMEOUT`.
 - `/api/metrics` is served from cache (a few ms) — the background thread does the work.
 - Browser polls every 5s; charts use `update('none')` to avoid animation thrash.
-- Leaflet basemap requires internet (CartoDB tiles). Disable map via removing `#panel-map` if running fully offline.
+- Chart.js is the only CDN dependency; everything else renders from local DOM.
 
 ---
 
 ## Related Projects
 
-- **soc-ops**, **soc-sbom**, **netscaler-honeypot**, **wazuh**, **soc-intel** — every panel reads from one of these.
+- **soc-ops**, **soc-sbom**, **wazuh**, **soc-intel** — every panel reads from one of these.

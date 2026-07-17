@@ -28,7 +28,6 @@ Each button takes you to a service:
 - **🚨 Alert Queue** → Review and triage security alerts
 - **🔍 SBOM Vulnerabilities** → Check app components for CVEs
 - **💻 Agent Health** → See which computers are online
-- **🪤 Honeypot Logs** → View attack attempts on our decoy
 
 ---
 

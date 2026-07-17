@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CD-Startpage: live SOC video-wall dashboard.
 
-Aggregates metrics from SOC Ops, SOC SBOM, NetScaler honeypot, Wazuh dashboard,
-and SOC Intel into a single auto-refreshing operations view.
+Aggregates metrics from SOC Ops, SOC SBOM, Wazuh dashboard and SOC Intel into a
+single auto-refreshing operations view.
 """
 import http.server
 import socketserver
@@ -39,8 +39,11 @@ def load_env():
         'SOCOPS_URL': 'http://10.10.0.40:8081',
         'SBOMGUARD_URL': 'http://10.10.0.40:8082',
         'SOCINT_URL': 'http://10.10.0.40:8083',
-        'HONEYPOT_URL': 'http://10.10.0.40:8084',
         'WAZUH_URL': 'http://10.10.0.40:8080',
+        # wazuh-mods collector (dashboard.py). Serves /api/data: agents,
+        # vulnerabilities, MITRE. Distinct from WAZUH_URL, which is the
+        # Wazuh Dashboards UI the service launcher links to.
+        'WAZUHDATA_URL': 'http://10.10.0.40:8084',
         'ROADMAP_URL': 'http://10.10.0.40:8090',
         'PHISHING_URL': 'http://10.10.0.40:8091',
         'ATTACK_URL': 'http://10.10.0.40:8092',
@@ -115,8 +118,8 @@ def collect_metrics():
     socops = CONFIG['SOCOPS_URL'].rstrip('/')
     sbom = CONFIG['SBOMGUARD_URL'].rstrip('/')
     socint = CONFIG['SOCINT_URL'].rstrip('/')
-    honeypot = CONFIG['HONEYPOT_URL'].rstrip('/')
     wazuh = CONFIG['WAZUH_URL'].rstrip('/')
+    wazuhdata = CONFIG['WAZUHDATA_URL'].rstrip('/')
 
     extra_services = {
         'roadmap':      CONFIG['ROADMAP_URL'].rstrip('/'),
@@ -159,21 +162,20 @@ def collect_metrics():
             ('socops_mitre',    f'{socops}/api/mitre'),
             ('socops_rules',    f'{socops}/api/rules'),
             ('socops_timeline', f'{socops}/api/timeline/global'),
+            # 5-minute buckets over the last 2h: drives the EPS panel sparkline.
+            ('socops_timeline_fine',
+             f'{socops}/api/timeline/global?hours=2&bucket_minutes=5'),
             ('socops_alerts',   f'{socops}/api/alerts?per=15'),
         ]
+    if _enabled(wazuhdata):
+        # One call returns agents + vulnerabilities + MITRE + CVE detail.
+        job_specs += [('wazuh_data', f'{wazuhdata}/api/data')]
     if _enabled(sbom):
         job_specs += [
             ('sbom_stats',      f'{sbom}/api/stats'),
             ('sbom_feed',       f'{sbom}/api/feed-status'),
             ('sbom_matches',    f'{sbom}/api/matches?status=new'),
         ]
-    if _enabled(honeypot):
-        job_specs += [
-            ('honeypot_stats',  f'{honeypot}/api/stats'),
-            ('honeypot_ips',    f'{honeypot}/api/unique-ips'),
-            ('honeypot_events', f'{honeypot}/api/events?per=25'),
-        ]
-
     jobs = dict(job_specs)
     results = {}
     if jobs:
@@ -190,7 +192,6 @@ def collect_metrics():
         'socops':    bool(results.get('socops_stats') or results.get('socops_kpis')),
         'sbomguard': bool(results.get('sbom_stats') or results.get('sbom_feed') is not None),
         'socint':    _probe(socint) if _enabled(socint) else False,
-        'honeypot':  bool(results.get('honeypot_stats') or results.get('honeypot_ips')),
         'wazuh':     _probe(wazuh) if _enabled(wazuh) else False,
     }
 
@@ -214,8 +215,8 @@ def collect_metrics():
             'socops': socops,
             'sbomguard': sbom,
             'socint': socint,
-            'honeypot': honeypot,
             'wazuh': wazuh,
+            'wazuhdata': wazuhdata,
             **extra_services,
         },
         'health': health,
@@ -225,6 +226,7 @@ def collect_metrics():
             'mitre':    results.get('socops_mitre') or {},
             'rules':    results.get('socops_rules') or {},
             'timeline': results.get('socops_timeline') or [],
+            'timeline_fine': results.get('socops_timeline_fine') or [],
             'alerts':   results.get('socops_alerts') or {},
         },
         'sbomguard': {
@@ -232,12 +234,7 @@ def collect_metrics():
             'feed':    results.get('sbom_feed') or {},
             'matches': results.get('sbom_matches') if isinstance(results.get('sbom_matches'), list) else [],
         },
-        'honeypot': {
-            'stats':  results.get('honeypot_stats') or {},
-            'ips':    results.get('honeypot_ips') or {},
-            'events': results.get('honeypot_events') or {},
-        },
-        'wazuh': {},
+        'wazuh': results.get('wazuh_data') or {},
     }
 
 
@@ -291,7 +288,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 'socops': CONFIG['SOCOPS_URL'],
                 'sbomguard': CONFIG['SBOMGUARD_URL'],
                 'socint': CONFIG['SOCINT_URL'],
-                'honeypot': CONFIG['HONEYPOT_URL'],
                 'wazuh': CONFIG['WAZUH_URL'],
                 'soc_name': CONFIG['SOC_NAME'],
             })
@@ -325,7 +321,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             '{{SOCOPS_URL}}':        CONFIG['SOCOPS_URL'],
             '{{SBOMGUARD_URL}}':     CONFIG['SBOMGUARD_URL'],
             '{{SOCINT_URL}}':        CONFIG['SOCINT_URL'],
-            '{{HONEYPOT_URL}}':      CONFIG['HONEYPOT_URL'],
             '{{WAZUH_URL}}':         CONFIG['WAZUH_URL'],
             '{{ROADMAP_URL}}':       CONFIG['ROADMAP_URL'],
             '{{PHISHING_URL}}':      CONFIG['PHISHING_URL'],
@@ -385,7 +380,7 @@ def main():
     print(f'CD-Startpage SOC video-wall: http://{host}:{port}')
     print(f'  cache TTL: {CACHE_TTL}s   fetch timeout: {FETCH_TIMEOUT}s')
     print(f'  upstreams: socops={CONFIG["SOCOPS_URL"]} sbom={CONFIG["SBOMGUARD_URL"]} '
-          f'honeypot={CONFIG["HONEYPOT_URL"]} wazuh={CONFIG["WAZUH_URL"]}')
+          f'wazuh={CONFIG["WAZUH_URL"]}')
 
     with ReusableThreadingHTTPServer((host, port), Handler) as httpd:
         try:

@@ -2,7 +2,7 @@
 
 > SOC operations wall / service portal
 
-A lightweight service dashboard providing quick access links to all CTI/SOC services: SOCops, SBOMguard, SOCint, NetScaler Honeypot, and Wazuh dashboard.
+A lightweight service dashboard providing quick access links to all CTI/SOC services: SOCops, SBOMguard, SOCint, and Wazuh dashboard.
 
 ---
 
@@ -49,7 +49,6 @@ STARTPAGE_HOST=0.0.0.0
 SOCOPS_URL=http://10.10.0.40:8081
 SBOMGUARD_URL=http://10.10.0.40:8082
 SOCINT_URL=http://10.10.0.40:8083
-HONEYPOT_URL=http://10.10.0.40:8084
 WAZUH_URL=http://10.10.0.40:8080
 ```
 
