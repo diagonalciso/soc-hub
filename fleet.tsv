@@ -19,7 +19,6 @@ soc-canary	8093	Monitors	git	diagonalciso/soc-canary	deception token manager
 soc-cred-monitor	8094	Monitors	git	diagonalciso/soc-cred-monitor	breach/credential exposure
 soc-passive-dns	8095	Monitors	git	diagonalciso/soc-passive-dns	DNS/subdomain tracking
 soc-supply	8109	Monitors	git	diagonalciso/soc-supply	supply-chain monitor
-soc-netscaler	8120	Monitors	git	diagonalciso/soc-netscaler	NetScaler ADC/Gateway threat monitor — OSINT CVE/KEV/EPSS tracker (public)
 netscaler-patch-monitor	8121	Monitors	git	diagonalciso/netscaler-patch-monitor	PRIVATE own-gateway patch monitor (repo exists, private)
 soc-nids	8102	Detection & Network	git	diagonalciso/soc-nids	network IDS view
 soc-detections	8103	Detection & Network	git	diagonalciso/soc-detections	detection rule catalog

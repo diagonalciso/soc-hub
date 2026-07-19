@@ -47,7 +47,6 @@ live only in the gitignored `.env`.
 | SOC Cred Monitor | 8094 | `soc-cred-monitor` — breach/credential exposure |
 | SOC Passive DNS | 8095 | `soc-passive-dns` — DNS/subdomain tracking |
 | SOC Supply | 8109 | `soc-supply` — supply-chain monitor |
-| SOC NetScaler | 8120 | `soc-netscaler` — NetScaler CVE/KEV/EPSS threat monitor |
 | NetScaler Patch | 8121 | `netscaler-patch-monitor` — own-gateway patch monitor (**private repo**) |
 
 ### Detection & Network
