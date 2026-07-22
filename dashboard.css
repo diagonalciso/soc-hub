@@ -200,6 +200,14 @@ body::after {
   text-shadow: 0 0 8px rgba(0, 204, 255, 0.5);
   line-height: 1;
 }
+/* Fixed advance per digit. Orbitron has no tnum feature, so tabular-nums cannot
+   do this — see tickClock(). 0.84em clears the widest digit (834/1000 em); the
+   narrow ones ('1' at 391) are centred in that box instead of collapsing it. */
+.clock-time .dg {
+  display: inline-block;
+  width: 0.84em;
+  text-align: center;
+}
 .clock-date {
   color: var(--text-dim);
   font-size: 0.6rem;

@@ -81,7 +81,15 @@ function recentAlertRate(fine) {
 /* ── Clock ─────────────────────────────────────────────────────────────── */
 function tickClock() {
   const d = new Date();
-  $('#clock-time').textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  // Orbitron ships no tabular-figure feature (its only OpenType features are kern
+  // and mark), so font-variant-numeric:tabular-nums is a no-op on this font and the
+  // digits keep their wildly uneven natural advances -- '1' is 391/1000 em against
+  // 834 for '0' and '8'. Setting the clock as plain text therefore made it visibly
+  // jump sideways every time a digit ticked past a 1. Box each digit instead (see
+  // .clock-time .dg); colons keep their natural narrow width so the look is
+  // unchanged. Safe as innerHTML: the content is generated digits, never input.
+  const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  $('#clock-time').innerHTML = time.replace(/\d/g, ch => `<span class="dg">${ch}</span>`);
   $('#clock-date').textContent = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${CLOCK_TZ_LABEL}`;
 }
 setInterval(tickClock, 1000); tickClock();
